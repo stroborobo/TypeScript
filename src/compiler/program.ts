@@ -347,7 +347,24 @@ namespace ts {
         const currentDirectory = host.getCurrentDirectory();
         const resolveModuleNamesWorker = host.resolveModuleNames
             ? ((moduleNames: string[], containingFile: string) => host.resolveModuleNames(moduleNames, containingFile))
-            : ((moduleNames: string[], containingFile: string) => map(moduleNames, moduleName => resolveModuleName(moduleName, containingFile, options, host).resolvedModule));
+            : ((moduleNames: string[], containingFile: string) => {
+                const resolvedModuleNames: ResolvedModule[] = [];
+                // resolveModuleName does not store any results between calls.
+                // lookup is a local cache to avoid resolving the same module name several times
+                const lookup: Map<ResolvedModule> = {};
+                for (const moduleName of moduleNames) {
+                    let resolvedName: ResolvedModule;
+                    if (hasProperty(lookup, moduleName)) {
+                        resolvedName = lookup[moduleName];
+                    }
+                    else {
+                        resolvedName = resolveModuleName(moduleName, containingFile, options, host).resolvedModule;
+                        lookup[moduleName] = resolvedName;
+                    }
+                    resolvedModuleNames.push(resolvedName);
+                }
+                return resolvedModuleNames;
+            });
 
         const filesByName = createFileMap<SourceFile>();
         // stores 'filename -> file association' ignoring case

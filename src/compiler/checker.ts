@@ -14113,22 +14113,7 @@ namespace ts {
                         }
                         // body of ambient external module is always a module block
                         for (const statement of (<ModuleBlock>node.body).statements) {
-                            const symbol = getSymbolOfNode(statement);
-                            if (!symbol || !(symbol.flags & SymbolFlags.Merged)) {
-                                error(statement, Diagnostics.Module_augmentation_cannot_introduce_new_names_in_the_top_level_scope);
-                            }
-                            else {
-                                switch (statement.kind) {
-                                    case SyntaxKind.InterfaceDeclaration:
-                                    case SyntaxKind.EnumDeclaration:
-                                    case SyntaxKind.ModuleDeclaration:
-                                        // open ended entity - can be augmented
-                                        break;
-                                    default:
-                                        // non-open ended entity - issue error
-                                        error(statement, Diagnostics.Module_augmentation_can_extend_structure_only_for_interfaces_enums_and_namespaces);
-                                }
-                            }
+                            checkContentOfModuleAugmentation(statement);
                         }
                     }
                     else {
@@ -14142,6 +14127,28 @@ namespace ts {
                 }
             }
             checkSourceElement(node.body);
+        }
+
+        function checkContentOfModuleAugmentation(node: Node): void {
+            if (node.kind === SyntaxKind.VariableStatement) {
+                // error each individual name in variable statement instead of marking the entire variable statement
+                for (const decl of (<VariableStatement>node).declarationList.declarations) {
+                    if (isBindingPattern(decl.name)) {
+                        for (const el of (<BindingPattern>decl.name).elements) {
+                            checkContentOfModuleAugmentation(el)
+                        }
+                    }
+                    else {
+                        checkContentOfModuleAugmentation(decl.name);
+                    }
+                } 
+            }
+            else {
+                const symbol = getSymbolOfNode(node);
+                if (!symbol || !(symbol.flags & SymbolFlags.Merged)) {
+                    error(node, Diagnostics.Module_augmentation_cannot_introduce_new_names_in_the_top_level_scope);
+                }
+            }
         }
 
         function getFirstIdentifier(node: EntityName | Expression): Identifier {

@@ -1,0 +1,28 @@
+tests/cases/compiler/observable.ts(4,12): error TS2323: Cannot redeclare exported variable 'x'.
+tests/cases/compiler/x.ts(3,9): error TS2323: Cannot redeclare exported variable 'x'.
+tests/cases/compiler/x.ts(3,9): error TS2661: Module augmentation cannot introduce new names in the top level scope.
+
+
+==== tests/cases/compiler/x.ts (2 errors) ====
+    
+    declare module "./observable" {
+        var x: number;
+            ~
+!!! error TS2323: Cannot redeclare exported variable 'x'.
+            ~
+!!! error TS2661: Module augmentation cannot introduce new names in the top level scope.
+    }
+    export {}
+    
+==== tests/cases/compiler/observable.ts (1 errors) ====
+    export declare class Observable<T> {
+        filter(pred: (e:T) => boolean): Observable<T>;
+    }
+    export var x = 1;
+               ~
+!!! error TS2323: Cannot redeclare exported variable 'x'.
+    
+==== tests/cases/compiler/main.ts (0 errors) ====
+    import { Observable } from "./observable"
+    import "./x";
+    

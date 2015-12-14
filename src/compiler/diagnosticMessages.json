@@ -1759,6 +1759,14 @@
         "category": "Error",
         "code": 2658
     },
+    "Module augmentations should be defined on the top level of the file.": {
+        "category": "Error",
+        "code": 2659
+    },
+    "Invalid module name in augmentation, module '{0}' cannot be found.": {
+        "category": "Error",
+        "code": 2660
+    },
     "Import declaration '{0}' is using private name '{1}'.": {
         "category": "Error",
         "code": 4000

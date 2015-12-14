@@ -365,6 +365,17 @@ namespace ts {
             }
         }
 
+        function mergeModuleAugmentation(moduleName: LiteralExpression): void {
+            let mainModule = resolveExternalModuleNameWorker(moduleName, moduleName, Diagnostics.Invalid_module_name_in_augmentation_module_0_cannot_be_found);
+            if (!mainModule) {
+                return;
+            }
+
+            mainModule = mainModule.flags & SymbolFlags.Merged ? mainModule : cloneSymbol(mainModule);
+            const moduleDeclaration = <ModuleDeclaration>moduleName.parent;
+            mergeSymbol(mainModule, moduleDeclaration.symbol);
+        }
+
         function addToSymbolTable(target: SymbolTable, source: SymbolTable, message: DiagnosticMessage) {
             for (const id in source) {
                 if (hasProperty(source, id)) {
@@ -1056,12 +1067,15 @@ namespace ts {
         }
 
         function resolveExternalModuleName(location: Node, moduleReferenceExpression: Expression): Symbol {
+            return resolveExternalModuleNameWorker(location, moduleReferenceExpression, Diagnostics.Cannot_find_module_0); 
+        }
+
+        function resolveExternalModuleNameWorker(location: Node, moduleReferenceExpression: Expression, moduleNotFoundError: DiagnosticMessage): Symbol {
             if (moduleReferenceExpression.kind !== SyntaxKind.StringLiteral) {
                 return;
             }
 
             const moduleReferenceLiteral = <LiteralExpression>moduleReferenceExpression;
-            const searchPath = getDirectoryPath(getSourceFile(location).fileName);
 
             // Module names are escaped in our symbol table.  However, string literal values aren't.
             // Escape the name in the "require(...)" clause to ensure we find the right symbol.
@@ -1075,7 +1089,7 @@ namespace ts {
             if (!isRelative) {
                 const symbol = getSymbol(globals, "\"" + moduleName + "\"", SymbolFlags.ValueModule);
                 if (symbol) {
-                    return symbol;
+                    return getMergedSymbol(symbol);
                 }
             }
 
@@ -1083,12 +1097,12 @@ namespace ts {
             const sourceFile = resolvedModule && host.getSourceFile(resolvedModule.resolvedFileName);
             if (sourceFile) {
                 if (sourceFile.symbol) {
-                    return sourceFile.symbol;
+                    return getMergedSymbol(sourceFile.symbol);
                 }
                 error(moduleReferenceLiteral, Diagnostics.File_0_is_not_a_module, sourceFile.fileName);
                 return;
             }
-            error(moduleReferenceLiteral, Diagnostics.Cannot_find_module_0, moduleName);
+            error(moduleReferenceLiteral, moduleNotFoundError, moduleName);
         }
 
         // An external module with an 'export =' declaration resolves to the target of the 'export =' declaration,
@@ -14058,11 +14072,25 @@ namespace ts {
 
                 // Checks for ambient external modules.
                 if (isAmbientExternalModule) {
-                    if (!isGlobalSourceFile(node.parent)) {
-                        error(node.name, Diagnostics.Ambient_modules_cannot_be_nested_in_other_modules_or_namespaces);
+                    if (isExternalModule(getSourceFileOfNode(node))) {
+                        // ambient module declaration in external module can be an augmentation for some existing module
+                        // augmentations are defined on the top level in source file so we'll error if location is different
+                        if (node.parent.kind !== SyntaxKind.SourceFile) {
+                            error(node.name, Diagnostics.Module_augmentations_should_be_defined_on_the_top_level_of_the_file);
+                        }
+                        // body of ambient external module is always a module block
+                        for (const statement of (<ModuleBlock>node.body).statements) {
+                            const symbol = getSymbolOfNode(statement);
+                            // TODO: validate that content of the module does not introduce new entities 
+                        }
                     }
-                    if (isExternalModuleNameRelative(node.name.text)) {
-                        error(node.name, Diagnostics.Ambient_module_declaration_cannot_specify_relative_module_name);
+                    else {
+                        if (!isGlobalSourceFile(node.parent)) {
+                            error(node.name, Diagnostics.Ambient_modules_cannot_be_nested_in_other_modules_or_namespaces);
+                        }
+                        if (isExternalModuleNameRelative(node.name.text)) {
+                            error(node.name, Diagnostics.Ambient_module_declaration_cannot_specify_relative_module_name);
+                        }
                     }
                 }
             }
@@ -15500,6 +15528,11 @@ namespace ts {
             forEach(host.getSourceFiles(), file => {
                 if (!isExternalOrCommonJsModule(file)) {
                     mergeSymbolTable(globals, file.locals);
+                }
+                else if (file.moduleAugmentations.length) {
+                    for (const augmentation of file.moduleAugmentations) {
+                        mergeModuleAugmentation(augmentation);
+                    }
                 }
             });
 

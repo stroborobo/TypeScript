@@ -901,13 +901,17 @@ namespace ts {
             }
 
             const isJavaScriptFile = isSourceFileJavaScript(file);
+            const isExternalModuleFile = isExternalModule(file);
 
             let imports: LiteralExpression[];
+            let moduleAugmentations: LiteralExpression[];
+
             for (const node of file.statements) {
                 collect(node, /*allowRelativeModuleNames*/ true, /*collectOnlyRequireCalls*/ false);
             }
 
             file.imports = imports || emptyArray;
+            file.moduleAugmentations = moduleAugmentations || emptyArray;
 
             return;
 
@@ -931,17 +935,25 @@ namespace ts {
                             break;
                         case SyntaxKind.ModuleDeclaration:
                             if ((<ModuleDeclaration>node).name.kind === SyntaxKind.StringLiteral && (node.flags & NodeFlags.Ambient || isDeclarationFile(file))) {
-                                // TypeScript 1.0 spec (April 2014): 12.1.6
-                                // An AmbientExternalModuleDeclaration declares an external module. 
-                                // This type of declaration is permitted only in the global module.
-                                // The StringLiteral must specify a top - level external module name.
-                                // Relative external module names are not permitted
-                                forEachChild((<ModuleDeclaration>node).body, node => {
+                                if (isExternalModuleFile) {
+                                    // ambient module declarations in external modules are interpreted as module augmentations
+                                    // they don't include module with name <moduleNameExpr> in program but require 
+                                    // that this module should be include by some another way. 
+                                    (moduleAugmentations || (moduleAugmentations = [])).push(<LiteralExpression>(<ModuleDeclaration>node).name);
+                                }
+                                else {
                                     // TypeScript 1.0 spec (April 2014): 12.1.6
-                                    // An ExternalImportDeclaration in anAmbientExternalModuleDeclaration may reference other external modules 
-                                    // only through top - level external module names. Relative external module names are not permitted.
-                                    collect(node, /*allowRelativeModuleNames*/ false, collectOnlyRequireCalls);
-                                });
+                                    // An AmbientExternalModuleDeclaration declares an external module. 
+                                    // This type of declaration is permitted only in the global module.
+                                    // The StringLiteral must specify a top - level external module name.
+                                    // Relative external module names are not permitted
+                                    forEachChild((<ModuleDeclaration>node).body, node => {
+                                        // TypeScript 1.0 spec (April 2014): 12.1.6
+                                        // An ExternalImportDeclaration in anAmbientExternalModuleDeclaration may reference other external modules 
+                                        // only through top - level external module names. Relative external module names are not permitted.
+                                        collect(node, /*allowRelativeModuleNames*/ false, collectOnlyRequireCalls);
+                                    });
+                                }
                             }
                             break;
                     }
@@ -1083,14 +1095,28 @@ namespace ts {
 
         function processImportedModules(file: SourceFile, basePath: string) {
             collectExternalModuleReferences(file);
-            if (file.imports.length) {
+            if (file.imports.length || file.moduleAugmentations.length) {
                 file.resolvedModules = {};
-                const moduleNames = map(file.imports, name => name.text);
+                const moduleNames: string[] = [];
+                for (const name of file.imports) {
+                    moduleNames.push(name.text);
+                }
+                for (const name of file.moduleAugmentations) {
+                    moduleNames.push(name.text);
+                }
                 const resolutions = resolveModuleNamesWorker(moduleNames, getNormalizedAbsolutePath(file.fileName, currentDirectory));
-                for (let i = 0; i < file.imports.length; ++i) {
+                for (let i = 0; i < moduleNames.length; ++i) {
                     const resolution = resolutions[i];
                     setResolvedModule(file, moduleNames[i], resolution);
-                    if (resolution && !options.noResolve) {
+                    // add file to program only if:
+                    // - resolution was successfull
+                    // - noResolve is falsy
+                    // - module name come from the list fo imports
+                    const shouldAddFile = resolution &&
+                        !options.noResolve &&
+                        i < file.imports.length;
+
+                    if (shouldAddFile) {
                         const importedFile = findSourceFile(resolution.resolvedFileName, toPath(resolution.resolvedFileName, currentDirectory, getCanonicalFileName), /*isDefaultLib*/ false, file, skipTrivia(file.text, file.imports[i].pos), file.imports[i].end);
 
                         if (importedFile && resolution.isExternalLibraryImport) {

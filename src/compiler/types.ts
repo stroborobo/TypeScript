@@ -1577,6 +1577,7 @@ namespace ts {
         // Content of this fiels should never be used directly - use getResolvedModuleFileName/setResolvedModuleFileName functions instead
         /* @internal */ resolvedModules: Map<ResolvedModule>;
         /* @internal */ imports: LiteralExpression[];
+        /* @internal */ moduleAugmentations: LiteralExpression[];
     }
 
     export interface ScriptReferenceHost {

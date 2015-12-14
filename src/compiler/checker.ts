@@ -14114,7 +14114,21 @@ namespace ts {
                         // body of ambient external module is always a module block
                         for (const statement of (<ModuleBlock>node.body).statements) {
                             const symbol = getSymbolOfNode(statement);
-                            // TODO: validate that content of the module does not introduce new entities 
+                            if (!symbol || !(symbol.flags & SymbolFlags.Merged)) {
+                                error(statement, Diagnostics.Module_augmentation_cannot_introduce_new_names_in_the_top_level_scope);
+                            }
+                            else {
+                                switch (statement.kind) {
+                                    case SyntaxKind.InterfaceDeclaration:
+                                    case SyntaxKind.EnumDeclaration:
+                                    case SyntaxKind.ModuleDeclaration:
+                                        // open ended entity - can be augmented
+                                        break;
+                                    default:
+                                        // non-open ended entity - issue error
+                                        error(statement, Diagnostics.Module_augmentation_can_extend_structure_only_for_interfaces_enums_and_namespaces);
+                                }
+                            }
                         }
                     }
                     else {

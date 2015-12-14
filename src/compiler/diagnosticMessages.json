@@ -1767,6 +1767,14 @@
         "category": "Error",
         "code": 2660
     },
+    "Module augmentation cannot introduce new names in the top level scope.": {
+        "category": "Error",
+        "code": 2661
+    },
+    "Module augmentation can extend structure only for interfaces, enums and namespaces": {
+        "category": "Error",
+        "code": 2662
+    },
     "Import declaration '{0}' is using private name '{1}'.": {
         "category": "Error",
         "code": 4000

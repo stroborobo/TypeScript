@@ -56,4 +56,41 @@ export declare class Observable<T> {
 export declare namespace Observable {
 }
 //// [map.d.ts]
+declare module "./observable" {
+    interface Observable<T> {
+        map<U>(proj: (e: T) => U): Observable<U>;
+    }
+    namespace Observable {
+        let someAnotherValue: number;
+    }
+}
 //// [main.d.ts]
+
+
+//// [DtsFileErrors]
+
+
+tests/cases/compiler/map.d.ts(1,16): error TS2436: Ambient module declaration cannot specify relative module name.
+
+
+==== tests/cases/compiler/map.d.ts (1 errors) ====
+    declare module "./observable" {
+                   ~~~~~~~~~~~~~~
+!!! error TS2436: Ambient module declaration cannot specify relative module name.
+        interface Observable<T> {
+            map<U>(proj: (e: T) => U): Observable<U>;
+        }
+        namespace Observable {
+            let someAnotherValue: number;
+        }
+    }
+    
+==== tests/cases/compiler/observable.d.ts (0 errors) ====
+    export declare class Observable<T> {
+        filter(pred: (e: T) => boolean): Observable<T>;
+    }
+    export declare namespace Observable {
+    }
+    
+==== tests/cases/compiler/main.d.ts (0 errors) ====
+    

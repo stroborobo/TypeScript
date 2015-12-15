@@ -2196,11 +2196,10 @@ namespace ts {
 
         function isExternalModuleAugmentation(node: Node): boolean {
             if (node) {
-                return node.kind === SyntaxKind.ModuleBlock &&
-                    node.parent.kind === SyntaxKind.ModuleDeclaration &&
-                    (<ModuleDeclaration>node.parent).name.kind === SyntaxKind.StringLiteral &&
-                    node.parent.parent.kind === SyntaxKind.SourceFile &&
-                    isExternalModule(<SourceFile>node.parent.parent);
+                return node.kind === SyntaxKind.ModuleDeclaration &&
+                    (<ModuleDeclaration>node).name.kind === SyntaxKind.StringLiteral &&
+                    node.parent.kind === SyntaxKind.SourceFile &&
+                    isExternalModule(<SourceFile>node.parent);
             }
             return false;
         }
@@ -2284,6 +2283,9 @@ namespace ts {
                     case SyntaxKind.FunctionDeclaration:
                     case SyntaxKind.EnumDeclaration:
                     case SyntaxKind.ImportEqualsDeclaration:
+                        if (isExternalModuleAugmentation(node)) {
+                            return true;
+                        }
                         const parent = getDeclarationContainer(node);
                         // If the node is not exported or it is not ambient module element (except import declaration)
                         if (!(getCombinedNodeFlags(node) & NodeFlags.Export) &&
@@ -2293,7 +2295,7 @@ namespace ts {
                         // Anything nested in external module augmentation is visible
                         // OR
                         // Exported members/ambient module elements (exception import declaration) are visible if parent is visible
-                        return isExternalModuleAugmentation(parent) || isDeclarationVisible(<Declaration>parent); 
+                        return isDeclarationVisible(<Declaration>parent); 
 
                     case SyntaxKind.PropertyDeclaration:
                     case SyntaxKind.PropertySignature:

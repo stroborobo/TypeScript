@@ -1067,7 +1067,7 @@ namespace ts {
         }
 
         function resolveExternalModuleName(location: Node, moduleReferenceExpression: Expression): Symbol {
-            return resolveExternalModuleNameWorker(location, moduleReferenceExpression, Diagnostics.Cannot_find_module_0); 
+            return resolveExternalModuleNameWorker(location, moduleReferenceExpression, Diagnostics.Cannot_find_module_0);
         }
 
         function resolveExternalModuleNameWorker(location: Node, moduleReferenceExpression: Expression, moduleNotFoundError: DiagnosticMessage): Symbol {
@@ -14135,13 +14135,13 @@ namespace ts {
                 for (const decl of (<VariableStatement>node).declarationList.declarations) {
                     if (isBindingPattern(decl.name)) {
                         for (const el of (<BindingPattern>decl.name).elements) {
-                            checkContentOfModuleAugmentation(el)
+                            checkContentOfModuleAugmentation(el);
                         }
                     }
                     else {
                         checkContentOfModuleAugmentation(decl.name);
                     }
-                } 
+                }
             }
             else {
                 const symbol = getSymbolOfNode(node);

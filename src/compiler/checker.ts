@@ -2194,6 +2194,17 @@ namespace ts {
             });
         }
 
+        function isExternalModuleAugmentation(node: Node): boolean {
+            if (node) {
+                return node.kind === SyntaxKind.ModuleBlock &&
+                    node.parent.kind === SyntaxKind.ModuleDeclaration &&
+                    (<ModuleDeclaration>node.parent).name.kind === SyntaxKind.StringLiteral &&
+                    node.parent.parent.kind === SyntaxKind.SourceFile &&
+                    isExternalModule(<SourceFile>node.parent.parent);
+            }
+            return false;
+        }
+        
         function isDeclarationVisible(node: Declaration): boolean {
             function getContainingExternalModule(node: Node) {
                 for (; node; node = node.parent) {
@@ -2279,8 +2290,10 @@ namespace ts {
                             !(node.kind !== SyntaxKind.ImportEqualsDeclaration && parent.kind !== SyntaxKind.SourceFile && isInAmbientContext(parent))) {
                             return isGlobalSourceFile(parent);
                         }
+                        // Anything nested in external module augmentation is visible
+                        // OR
                         // Exported members/ambient module elements (exception import declaration) are visible if parent is visible
-                        return isDeclarationVisible(<Declaration>parent);
+                        return isExternalModuleAugmentation(parent) || isDeclarationVisible(<Declaration>parent); 
 
                     case SyntaxKind.PropertyDeclaration:
                     case SyntaxKind.PropertySignature:

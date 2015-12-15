@@ -1,4 +1,4 @@
-//// [tests/cases/compiler/moduleAugmentatioNoNewNames.ts] ////
+//// [tests/cases/compiler/moduleAugmentationDeclarationEmit.ts] ////
 
 //// [map.ts]
 
@@ -10,14 +10,20 @@ declare module "./observable" {
     interface Observable<T> {
         map<U>(proj: (e:T) => U): Observable<U>
     }
-    class Bar {}
-    let y: number;
+    namespace Observable {
+        let someAnotherValue: number;
+    }
 }
 
 //// [observable.ts]
 export declare class Observable<T> {
     filter(pred: (e:T) => boolean): Observable<T>;
 }
+
+export namespace Observable {
+    let someValue: number;
+}
+
 
 //// [main.ts]
 import { Observable } from "./observable"
@@ -28,6 +34,10 @@ let y = x.map(x => x + 1);
 
 //// [observable.js]
 "use strict";
+var Observable;
+(function (Observable) {
+    var someValue;
+})(Observable = exports.Observable || (exports.Observable = {}));
 //// [map.js]
 "use strict";
 var observable_1 = require("./observable");
@@ -37,3 +47,13 @@ observable_1.Observable.prototype.map = function () { };
 require("./map");
 var x;
 var y = x.map(function (x) { return x + 1; });
+
+
+//// [observable.d.ts]
+export declare class Observable<T> {
+    filter(pred: (e: T) => boolean): Observable<T>;
+}
+export declare namespace Observable {
+}
+//// [map.d.ts]
+//// [main.d.ts]

@@ -54,6 +54,7 @@ namespace ts {
         let writer = createAndSetNewTextWriterWithSymbolWriter();
 
         let enclosingDeclaration: Node;
+        let resultHasExternalModuleSpecifier: boolean;
         let currentText: string;
         let currentLineMap: number[];
         let currentIdentifiers: Map<string>;
@@ -481,6 +482,7 @@ namespace ts {
         }
 
         function emitSourceFile(node: SourceFile) {
+            resultHasExternalModuleSpecifier = false;
             currentText = node.text;
             currentLineMap = getLineStarts(node);
             currentIdentifiers = node.identifiers;
@@ -488,6 +490,13 @@ namespace ts {
             enclosingDeclaration = node;
             emitDetachedComments(currentText, currentLineMap, writer, writeCommentRange, node, newLine, true /* remove comments */);
             emitLines(node.statements);
+            if (isCurrentFileExternalModule && node.moduleAugmentations.length && !resultHasExternalModuleSpecifier) {
+                // if file was external module with augmentations - this fact should be preserved in .d.ts as well.
+                // in case if we didn't write any external module specifiers in .d.ts we need to emit something 
+                // that will force compiler to think that this file is an external module - 'export {}' is a reasonable choice here.
+                write("export {};");
+                writeLine();
+            }
         }
 
         // Return a temp variable name to be used in `export default` statements.
@@ -721,6 +730,7 @@ namespace ts {
         }
 
         function emitExternalModuleSpecifier(parent: ImportEqualsDeclaration | ImportDeclaration | ExportDeclaration) {
+            resultHasExternalModuleSpecifier = true;
             let moduleSpecifier: Node;
             if (parent.kind === SyntaxKind.ImportEqualsDeclaration) {
                 const node = parent as ImportEqualsDeclaration;

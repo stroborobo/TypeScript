@@ -355,6 +355,9 @@ namespace ts {
                 if (writeByteOrderMark) {
                     data = "\uFEFF" + data;
                 }
+                if (fileName === "-") {
+                    fileName = "/dev/stdout";
+                }
 
                 let fd: number;
 

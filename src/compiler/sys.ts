@@ -179,7 +179,7 @@ namespace ts {
                 newLine: "\r\n",
                 useCaseSensitiveFileNames: false,
                 write(s: string): void {
-                    WScript.StdOut.Write(s);
+                    WScript.StdErr.Write(s);
                 },
                 readFile,
                 writeFile,
@@ -406,7 +406,7 @@ namespace ts {
                 newLine: _os.EOL,
                 useCaseSensitiveFileNames: useCaseSensitiveFileNames,
                 write(s: string): void {
-                    process.stdout.write(s);
+                    process.stderr.write(s);
                 },
                 readFile,
                 writeFile,
